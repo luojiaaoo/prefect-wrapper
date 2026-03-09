@@ -65,7 +65,7 @@ python main.py executor
 ### 终端 3：调用 Client
 
 ```bash
-python main.py client --action list
+python main.py client list
 ```
 
 ---
@@ -76,19 +76,19 @@ python main.py client --action list
 
 ```bash
 # 查看 deployment 列表
-python main.py client --action list
+python main.py client list
 
 # 触发一次性任务
-python main.py client --action run "my-task"
+python main.py client run "my-task"
 
 # 注册/更新 cron 定时任务
-python main.py client --action schedule --cron "*/5 * * * *" --timezone "Asia/Shanghai"
+python main.py client schedule --cron "*/5 * * * *" --timezone "Asia/Shanghai"
 
 # 删除 deployment
-python main.py client --action delete --deployment my-task-flow/task-run-deployment
+python main.py clientdelete --deployment my-task-flow/task-run-deployment
 
 # 查询任务状态
-python main.py client --action status --run-id <FLOW_RUN_ID>
+python main.py clientstatus --run-id <FLOW_RUN_ID>
 ```
 
 常用参数：
@@ -178,13 +178,13 @@ svc.delete_deployment("my-task-flow/task-run-deployment")
 先执行一次：
 
 ```bash
-python main.py client --action list
+python main.py client list
 ```
 
 若无 deployment，再执行：
 
 ```bash
-python main.py client --action schedule --cron "*/5 * * * *"
+python main.py clientschedule --cron "*/5 * * * *"
 ```
 
 或直接触发一次 `run`，会自动确保 deployment 存在。
