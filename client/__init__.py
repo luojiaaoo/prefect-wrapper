@@ -66,17 +66,14 @@ def register_cron_task(
     cron: str,
     entrypoint: str,
     deployment_name: str = "task-run-deployment",
-    timezone: str = "UTC",
 ):
     deployment = _service().register_cron_task(
         cron=cron,
         entrypoint=entrypoint,
         deployment_name=deployment_name,
-        timezone=timezone,
     )
     print("✅ Cron 任务已注册")
     print(f"   Deployment: {deployment.full_name}")
-    print(f"   Cron: {cron} ({timezone})")
     return deployment
 
 

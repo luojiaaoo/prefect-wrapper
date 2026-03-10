@@ -74,7 +74,6 @@ class PrefectTaskService:
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
         cron: Optional[str] = None,
-        timezone: str = "UTC",
     ) -> DeploymentInfo:
         deployment_name = deployment_name or self.config.default_deployment_name
         work_pool_name = work_pool_name or self.config.default_work_pool
@@ -94,7 +93,6 @@ class PrefectTaskService:
         }
         if cron:
             deployment_kwargs["cron"] = cron
-            deployment_kwargs["timezone"] = timezone
 
         deployment = RunnerDeployment.from_entrypoint(**deployment_kwargs)
         deployment_id = deployment.apply(work_pool_name=work_pool_name)
@@ -138,7 +136,6 @@ class PrefectTaskService:
         entrypoint: str,
         deployment_name: Optional[str] = None,
         flow_name: Optional[str] = None,
-        timezone: str = "UTC",
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
     ) -> DeploymentInfo:
@@ -149,7 +146,6 @@ class PrefectTaskService:
             work_pool_name=work_pool_name or self.config.default_work_pool,
             work_queue_name=work_queue_name or self.config.default_work_queue,
             cron=cron,
-            timezone=timezone,
         )
 
     def delete_deployment(self, deployment_ref: str, missing_ok: bool = True) -> bool:

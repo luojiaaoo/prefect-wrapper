@@ -36,7 +36,6 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
         default="my-task-flow/task-run-deployment",
         help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
     )
-    schedule_parser.add_argument("--timezone", default="UTC", help="cron 时区")
     schedule_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
 
     delete_parser = client_actions.add_parser("delete", help="删除 deployment")
@@ -63,7 +62,6 @@ def handle_client_mode(args) -> None:
             cron=args.cron,
             entrypoint=args.entrypoint,
             deployment_name=args.deployment,
-            timezone=args.timezone,
         )
     elif args.action == "delete":
         delete_deployment(deployment_ref=args.deployment)
