@@ -8,7 +8,6 @@ class DeploymentInfo:
     id: str
     name: str
     flow_name: str
-    full_name: str
     work_pool_name: Optional[str] = None
     work_queue_name: Optional[str] = None
 

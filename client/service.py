@@ -38,7 +38,6 @@ class PrefectTaskService:
             id=str(d.id),
             name=d.name,
             flow_name=flow_name,
-            full_name=f"{flow_name}/{d.name}",
             work_pool_name=getattr(d, "work_pool_name", None),
             work_queue_name=getattr(d, "work_queue_name", None),
         )
@@ -61,9 +60,8 @@ class PrefectTaskService:
 
     def _resolve_deployment_id(self, deployment_ref: str) -> str:
         deployment_ref = deployment_ref.strip()
-        deployment_name = deployment_ref.split("/")[-1]
         for d in self.list_deployments():
-            if d.name == deployment_name or d.full_name == deployment_ref:
+            if d.name == deployment_ref:
                 return d.id
         raise DeploymentNotFoundError(f"Deployment not found: {deployment_ref}")
 
@@ -115,7 +113,7 @@ class PrefectTaskService:
         work_queue_name = work_queue_name or self.config.default_work_queue
 
         # One-off runs require an explicit deployment; ensure it exists from the provided entrypoint.
-        self.ensure_deployment(entrypoint=entrypoint, deployment_name=deployment_ref.split("/")[-1])
+        self.ensure_deployment(entrypoint=entrypoint, deployment_name=deployment_ref)
 
         try:
             deployment_id = self._resolve_deployment_id(deployment_ref)

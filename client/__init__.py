@@ -58,7 +58,7 @@ def list_deployments() -> list[DeploymentInfo]:
     print(f"\n📋 部署列表 (共 {len(items)} 个):")
     print("-" * 50)
     for item in items:
-        print(f"  • {item.full_name} | pool={item.work_pool_name} | queue={item.work_queue_name}")
+        print(f"  • {item.name} | pool={item.work_pool_name} | queue={item.work_queue_name}")
     print("-" * 50)
     return items
 
@@ -74,7 +74,8 @@ def register_cron_task(
         deployment_name=deployment_name,
     )
     print("✅ Cron 任务已注册")
-    print(f"   Deployment: {deployment.full_name}")
+    display_name = deployment_name or deployment.name
+    print(f"   Deployment: {display_name}")
     return deployment
 
 

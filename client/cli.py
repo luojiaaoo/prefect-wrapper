@@ -9,11 +9,10 @@ def _parse_schedule_deployment(value: str) -> str:
     if not deployment_ref:
         raise argparse.ArgumentTypeError("--deployment 不能为空")
 
-    deployment_name = deployment_ref.rsplit("/", 1)[-1]
-    if not deployment_name:
-        raise argparse.ArgumentTypeError("--deployment 格式非法")
+    if "/" in deployment_ref:
+        raise argparse.ArgumentTypeError("--deployment 仅支持 deployment 名，不支持 flow/name")
 
-    return deployment_name
+    return deployment_ref
 
 
 def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:

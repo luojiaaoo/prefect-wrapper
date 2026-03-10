@@ -82,13 +82,13 @@ python -m client list
 python -m client list
 
 # 触发一次性任务
-python -m client run "my-task" --deployment my-task-flow/task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
+python -m client run "my-task" --deployment task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
 
 # 注册/更新 cron 定时任务
 python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment
 
 # 删除 deployment
-python -m client delete --deployment my-task-flow/task-run-deployment
+python -m client delete --deployment task-run-deployment
 
 # 查询任务状态
 python -m client status --run-id <FLOW_RUN_ID>
@@ -113,7 +113,7 @@ from client.service import PrefectTaskService
 svc = PrefectTaskService()
 run = svc.register_one_time_run(
     task_name="demo-once",
-    deployment_ref="my-task-flow/task-run-deployment",
+    deployment_ref="task-run-deployment",
     entrypoint="flows.task_flow:my_task_flow",
 )
 print(run.id, run.state_type)
@@ -130,7 +130,7 @@ deployment = svc.register_cron_task(
     entrypoint="flows.task_flow:my_task_flow",
     deployment_name="task-run-deployment",
 )
-print(deployment.full_name)
+print(deployment.name)
 ```
 
 ### 5.3 查看已有任务（deployments）
@@ -140,7 +140,7 @@ from client.service import PrefectTaskService
 
 svc = PrefectTaskService()
 for d in svc.list_deployments():
-    print(d.full_name, d.work_pool_name, d.work_queue_name)
+    print(d.name, d.work_pool_name, d.work_queue_name)
 ```
 
 ### 5.4 查询任务完成状态
@@ -159,7 +159,7 @@ print(status.state_type, status.is_terminal, status.is_completed, status.is_fail
 from client.service import PrefectTaskService
 
 svc = PrefectTaskService()
-svc.delete_deployment("my-task-flow/task-run-deployment")
+svc.delete_deployment("task-run-deployment")
 ```
 
 ---
@@ -242,7 +242,6 @@ def list_deployments():
                 "id": d.id,
                 "name": d.name,
                 "flow_name": d.flow_name,
-                "full_name": d.full_name,
                 "work_pool_name": d.work_pool_name,
                 "work_queue_name": d.work_queue_name,
             }
@@ -277,7 +276,7 @@ def schedule(req: CronRequest):
         )
         return {
             "deployment_id": d.id,
-            "full_name": d.full_name,
+            "name": d.name,
         }
     except PrefectServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -325,5 +324,5 @@ uvicorn app:app --reload --port 8000
 - `GET /deployments`
 - `POST /runs/once`
 - `POST /runs/schedule`
-- `DELETE /deployments/{flow}/{deployment}`
+- `DELETE /deployments/{deployment}`
 - `GET /runs/{run_id}/status`
