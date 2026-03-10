@@ -170,6 +170,43 @@ class PrefectTaskService:
 
         return self._to_deployment_info(saved)
 
+    def update_schedule_parameters(
+        self,
+        deployment_ref: str,
+        parameters: dict,
+    ) -> DeploymentInfo:
+        deployment_id = self._resolve_deployment_id(deployment_ref)
+
+        with self._client() as client:
+            schedules = client.read_deployment_schedules(deployment_id=deployment_id)
+            if not schedules:
+                raise PrefectServiceError("No schedule found for deployment")
+            if len(schedules) > 1:
+                raise PrefectServiceError("Multiple schedules found; please keep only one schedule")
+
+            schedule_item = schedules[0]
+            schedule_create = create_deployment_schedule_create(
+                schedule=schedule_item.schedule,
+                active=schedule_item.active,
+            )
+            if hasattr(schedule_create, "model_copy"):
+                schedule_create = schedule_create.model_copy(update={"parameters": parameters})
+            else:
+                schedule_create.parameters = parameters
+
+            client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule_item.id)
+            client.create_deployment_schedules(
+                deployment_id=deployment_id,
+                schedules=[schedule_create],
+            )
+
+            saved = client.read_deployment(deployment_id)
+
+        if not saved:
+            raise PrefectServiceError("Updating schedule parameters succeeded but reading deployment failed")
+
+        return self._to_deployment_info(saved)
+
     def cancel_schedule(self, deployment_ref: str) -> DeploymentInfo:
         deployment_id = self._resolve_deployment_id(deployment_ref)
 

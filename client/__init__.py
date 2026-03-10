@@ -18,6 +18,7 @@ __all__ = [
     "create_deployment",
     "trigger_run",
     "update_schedule",
+    "update_schedule_parameters",
     "cancel_schedule",
     "register_task",
     "list_deployments",
@@ -73,6 +74,19 @@ def update_schedule(
         parameters=parameters,
     )
     print("✅ Cron 已更新")
+    print(f"   Deployment: {deployment.name}")
+    return deployment
+
+
+def update_schedule_parameters(
+    deployment_ref: str,
+    parameters: dict,
+):
+    deployment = _service().update_schedule_parameters(
+        deployment_ref=deployment_ref,
+        parameters=parameters,
+    )
+    print("✅ 定时任务参数已更新")
     print(f"   Deployment: {deployment.name}")
     return deployment
 

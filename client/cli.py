@@ -10,6 +10,7 @@ from . import (
     list_deployments,
     trigger_run,
     update_schedule,
+    update_schedule_parameters,
 )
 
 
@@ -55,6 +56,18 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
         help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
     )
 
+    schedule_params_parser = client_actions.add_parser(
+        "schedule-params-update",
+        help="仅更新定时任务参数(不修改 cron)",
+    )
+    schedule_params_parser.add_argument(
+        "--deployment",
+        type=_parse_schedule_deployment,
+        required=True,
+        help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
+    )
+    schedule_params_parser.add_argument("--params", required=True, help="JSON 参数，例如 '{\"task_name\": \"demo\"}'")
+
     create_parser = client_actions.add_parser("create", help="创建或更新 deployment")
     create_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
     create_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
@@ -92,6 +105,12 @@ def handle_client_mode(args) -> None:
         )
     elif args.action == "schedule-cancel":
         cancel_schedule(deployment_ref=args.deployment)
+    elif args.action == "schedule-params-update":
+        params = json.loads(args.params)
+        update_schedule_parameters(
+            deployment_ref=args.deployment,
+            parameters=params,
+        )
     elif args.action == "create":
         create_deployment(
             deployment_name=args.deployment,

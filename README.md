@@ -87,6 +87,9 @@ python -m client trigger --deployment task-run-deployment --params '{"task_name"
 # 更新 cron 定时任务
 python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment --params '{"task_name":"demo"}'
 
+# 仅更新定时任务参数(不修改 cron)
+python -m client schedule-params-update --deployment task-run-deployment --params '{"task_name":"demo"}'
+
 # 取消 cron 定时任务
 python -m client schedule-cancel --deployment task-run-deployment
 
@@ -151,7 +154,20 @@ deployment = svc.update_schedule(
 print(deployment.name)
 ```
 
-### 5.4 取消 cron 定时任务
+### 5.4 仅更新定时任务参数
+
+```python
+from client.service import PrefectTaskService
+
+svc = PrefectTaskService()
+deployment = svc.update_schedule_parameters(
+    deployment_ref="task-run-deployment",
+    parameters={"task_name": "demo-update"},
+)
+print(deployment.name)
+```
+
+### 5.5 取消 cron 定时任务
 
 ```python
 from client.service import PrefectTaskService
@@ -163,7 +179,7 @@ deployment = svc.cancel_schedule(
 print(deployment.name)
 ```
 
-### 5.5 查看已有任务（deployments）
+### 5.6 查看已有任务（deployments）
 
 ```python
 from client.service import PrefectTaskService
@@ -173,7 +189,7 @@ for d in svc.list_deployments():
     print(d.name, d.work_pool_name, d.work_queue_name)
 ```
 
-### 5.6 查询任务完成状态
+### 5.7 查询任务完成状态
 
 ```python
 from client.service import PrefectTaskService
@@ -183,7 +199,7 @@ status = svc.get_run_status("<FLOW_RUN_ID>")
 print(status.state_type, status.is_terminal, status.is_completed, status.is_failed)
 ```
 
-### 5.7 删除任务模板（deployment）
+### 5.8 删除任务模板（deployment）
 
 ```python
 from client.service import PrefectTaskService
