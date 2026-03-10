@@ -85,10 +85,10 @@ python main.py client run "my-task"
 python main.py client schedule --cron "*/5 * * * *" --timezone "Asia/Shanghai"
 
 # 删除 deployment
-python main.py clientdelete --deployment my-task-flow/task-run-deployment
+python main.py client delete --deployment my-task-flow/task-run-deployment
 
 # 查询任务状态
-python main.py clientstatus --run-id <FLOW_RUN_ID>
+python main.py client status --run-id <FLOW_RUN_ID>
 ```
 
 常用参数：
@@ -184,7 +184,7 @@ python main.py client list
 若无 deployment，再执行：
 
 ```bash
-python main.py clientschedule --cron "*/5 * * * *"
+python main.py client schedule --cron "*/5 * * * *"
 ```
 
 或直接触发一次 `run`，会自动确保 deployment 存在。
