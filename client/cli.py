@@ -23,7 +23,8 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
 
     run_parser = client_actions.add_parser("run", help="触发一次性任务")
     run_parser.add_argument("task_name", nargs="+", help="任务名称")
-    run_parser.add_argument("--deployment", default="my-task-flow/task-run-deployment", help="Deployment名称")
+    run_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
+    run_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
     run_parser.add_argument("--timeout", type=int, default=60, help="等待超时(秒)")
 
     client_actions.add_parser("list", help="列出所有 deployments")
@@ -33,7 +34,7 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
     schedule_parser.add_argument(
         "--deployment",
         type=_parse_schedule_deployment,
-        default="my-task-flow/task-run-deployment",
+        required=True,
         help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
     )
     schedule_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
@@ -54,7 +55,12 @@ def handle_client_mode(args) -> None:
     os.environ["PREFECT_API_URL"] = f"http://{args.host}:{args.port}/api"
 
     if args.action == "run":
-        register_task(" ".join(args.task_name), deployment_name=args.deployment, timeout=args.timeout)
+        register_task(
+            " ".join(args.task_name),
+            deployment_name=args.deployment,
+            entrypoint=args.entrypoint,
+            timeout=args.timeout,
+        )
     elif args.action == "list":
         list_deployments()
     elif args.action == "schedule":

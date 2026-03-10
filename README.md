@@ -82,10 +82,10 @@ python -m client list
 python -m client list
 
 # 触发一次性任务
-python -m client run "my-task"
+python -m client run "my-task" --deployment my-task-flow/task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
 
 # 注册/更新 cron 定时任务
-python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --timezone "Asia/Shanghai"
+python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment --timezone "Asia/Shanghai"
 
 # 删除 deployment
 python -m client delete --deployment my-task-flow/task-run-deployment
@@ -96,7 +96,7 @@ python -m client status --run-id <FLOW_RUN_ID>
 
 常用参数：
 
-- `--deployment`：默认 `my-task-flow/task-run-deployment`
+- `--deployment`：必须显式传入（run/schedule）
 - `--pool`：默认 `task-pool`（executor 使用）
 - `--queue`：默认 `task-queue`（executor 使用）
 - `--host` / `--port`：默认 `127.0.0.1:4200`
@@ -111,7 +111,11 @@ python -m client status --run-id <FLOW_RUN_ID>
 from client.service import PrefectTaskService
 
 svc = PrefectTaskService()
-run = svc.register_one_time_run(task_name="demo-once")
+run = svc.register_one_time_run(
+    task_name="demo-once",
+    deployment_ref="my-task-flow/task-run-deployment",
+    entrypoint="flows.task_flow:my_task_flow",
+)
 print(run.id, run.state_type)
 ```
 
@@ -124,6 +128,7 @@ svc = PrefectTaskService()
 deployment = svc.register_cron_task(
     cron="*/10 * * * *",
     entrypoint="flows.task_flow:my_task_flow",
+    deployment_name="task-run-deployment",
     timezone="Asia/Shanghai",
 )
 print(deployment.full_name)
@@ -188,10 +193,10 @@ python -m client list
 若无 deployment，再执行：
 
 ```bash
-python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow"
+python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment
 ```
 
-或直接触发一次 `run`，会自动确保 deployment 存在。
+（注：现在 `run` 不会自动 ensure deployment，必须提前 `schedule` 创建 deployment 或通过 ensure_deployment 创建。）
 
 ---
 
@@ -214,14 +219,15 @@ svc = PrefectTaskService()
 
 class RunOnceRequest(BaseModel):
     task_name: str
-    deployment: str = "my-task-flow/task-run-deployment"
+    deployment: str
+    entrypoint: str
 
 
 class CronRequest(BaseModel):
     cron: str
-    entrypoint: str = "flows.task_flow:my_task_flow"
+    entrypoint: str
     timezone: str = "Asia/Shanghai"
-    deployment_name: str = "task-run-deployment"
+    deployment_name: str
 
 
 @app.get("/health")
@@ -251,7 +257,7 @@ def list_deployments():
 @app.post("/runs/once")
 def run_once(req: RunOnceRequest):
     try:
-        run = svc.register_one_time_run(task_name=req.task_name, deployment_ref=req.deployment)
+        run = svc.register_one_time_run(task_name=req.task_name, deployment_ref=req.deployment, entrypoint=req.entrypoint)
         return {
             "run_id": run.id,
             "state_type": run.state_type,

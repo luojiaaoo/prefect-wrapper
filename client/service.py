@@ -108,11 +108,14 @@ class PrefectTaskService:
     def register_one_time_run(
         self,
         task_name: str,
-        deployment_ref: Optional[str] = None,
+        deployment_ref: str,
+        entrypoint: str,
         work_queue_name: Optional[str] = None,
     ) -> FlowRunInfo:
-        deployment_ref = deployment_ref or f"{self.config.default_flow_name}/{self.config.default_deployment_name}"
         work_queue_name = work_queue_name or self.config.default_work_queue
+
+        # One-off runs require an explicit deployment; ensure it exists from the provided entrypoint.
+        self.ensure_deployment(entrypoint=entrypoint, deployment_name=deployment_ref.split("/")[-1])
 
         try:
             deployment_id = self._resolve_deployment_id(deployment_ref)
@@ -134,7 +137,7 @@ class PrefectTaskService:
         self,
         cron: str,
         entrypoint: str,
-        deployment_name: Optional[str] = None,
+        deployment_name: str,
         flow_name: Optional[str] = None,
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
@@ -142,7 +145,7 @@ class PrefectTaskService:
         _ = flow_name  # reserved for external naming; flow comes from entrypoint
         return self.ensure_deployment(
             entrypoint=entrypoint,
-            deployment_name=deployment_name or self.config.default_deployment_name,
+            deployment_name=deployment_name,
             work_pool_name=work_pool_name or self.config.default_work_pool,
             work_queue_name=work_queue_name or self.config.default_work_queue,
             cron=cron,

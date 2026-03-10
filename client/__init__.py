@@ -31,11 +31,12 @@ def _service() -> PrefectTaskService:
 
 def register_task(
     task_name: str,
-    deployment_name: str = "my-task-flow/task-run-deployment",
+    deployment_name: str,
+    entrypoint: str,
     timeout: int = 60,
 ):
     _ = timeout
-    run = _service().register_one_time_run(task_name=task_name, deployment_ref=deployment_name)
+    run = _service().register_one_time_run(task_name=task_name, deployment_ref=deployment_name, entrypoint=entrypoint)
     print("=" * 50)
     print("📝 触发任务 (Deployment)")
     print("=" * 50)
@@ -65,7 +66,7 @@ def list_deployments() -> list[DeploymentInfo]:
 def register_cron_task(
     cron: str,
     entrypoint: str,
-    deployment_name: str = "task-run-deployment",
+    deployment_name: str,
 ):
     deployment = _service().register_cron_task(
         cron=cron,
