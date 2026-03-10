@@ -54,13 +54,13 @@ def run_server_docker(host: str = "127.0.0.1", port: int = 4200):
 
 
 def run_server_local(host: str = "127.0.0.1", port: int = 4200):
-    """本地启动 Prefect Server (SQLite，有并发锁定问题)"""
+    """本地启动 Prefect Server"""
     print("=" * 50)
-    print("⚠️  本地模式启动 (可能有 SQLite 锁定问题)")
+    print("⚠️  本地模式启动")
     print("=" * 50)
     print(f"📊 UI 地址: http://{host}:{port}")
     print(f"📡 API 地址: http://{host}:{port}/api")
-    print("💡 推荐: 使用 Docker 模式 (python -m server --docker)")
+    print("💡 可选: 使用 Docker 模式 (python -m server --docker)")
     print("=" * 50)
 
     os.makedirs(PREFECT_DATA, exist_ok=True)
@@ -75,9 +75,6 @@ def run_server_local(host: str = "127.0.0.1", port: int = 4200):
 
 def run_server(host: str = "127.0.0.1", port: int = 4200, use_docker: bool = None):
     """启动 Prefect Server"""
-    if use_docker is None:
-        use_docker = is_docker_running()
-
     if use_docker:
         run_server_docker(host, port)
     else:
@@ -90,8 +87,5 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=4200)
     parser.add_argument("--docker", action="store_true", help="使用 Docker 启动")
-    parser.add_argument("--local", action="store_true", help="使用本地启动")
     args = parser.parse_args()
-
-    use_docker = args.docker if args.docker else (not args.local and is_docker_running())
-    run_server(args.host, args.port, use_docker)
+    run_server(args.host, args.port, args.docker)
