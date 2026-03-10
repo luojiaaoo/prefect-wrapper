@@ -33,13 +33,14 @@ def run_server_docker(host: str = "127.0.0.1", port: int = 4200):
 
     # 停止并移除旧容器
     subprocess.run(["docker", "stop", "prefect-server"], capture_output=True)
-    subprocess.run(["docker", "rm", "prefect-server"], capture_output=True)
 
     # 启动新容器
     subprocess.run([
         "docker", "run", "-d", "--rm",
         "--name", "prefect-server",
         "-p", f"{port}:4200",
+        "-v", f"{PREFECT_DATA}:/root/.prefect",
+        "-e", "PREFECT_HOME=/root/.prefect",
         "prefecthq/prefect:3-latest",
         "--",
         "prefect", "server", "start",
