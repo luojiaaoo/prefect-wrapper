@@ -37,11 +37,13 @@ def run_server_docker(host: str = "127.0.0.1", port: int = 4200):
 
     # 启动新容器
     subprocess.run([
-        "docker", "run", "-d",
+        "docker", "run", "-d", "--rm",
         "--name", "prefect-server",
         "-p", f"{port}:4200",
-        "-p", "4201:4201",
-        "prefecthq/prefect:sha-69be6c8-python3.12-conda"
+        "prefecthq/prefect:3-latest",
+        "--",
+        "prefect", "server", "start",
+        "--host", "0.0.0.0",
     ])
 
     print("⏳ 等待 Server 启动...")
