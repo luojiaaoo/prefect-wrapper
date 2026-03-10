@@ -85,7 +85,7 @@ python -m client list
 python -m client run "my-task" --deployment my-task-flow/task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
 
 # 注册/更新 cron 定时任务
-python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment --timezone "Asia/Shanghai"
+python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment
 
 # 删除 deployment
 python -m client delete --deployment my-task-flow/task-run-deployment
@@ -129,7 +129,6 @@ deployment = svc.register_cron_task(
     cron="*/10 * * * *",
     entrypoint="flows.task_flow:my_task_flow",
     deployment_name="task-run-deployment",
-    timezone="Asia/Shanghai",
 )
 print(deployment.full_name)
 ```
@@ -226,7 +225,6 @@ class RunOnceRequest(BaseModel):
 class CronRequest(BaseModel):
     cron: str
     entrypoint: str
-    timezone: str = "Asia/Shanghai"
     deployment_name: str
 
 
@@ -275,7 +273,6 @@ def schedule(req: CronRequest):
         d = svc.register_cron_task(
             cron=req.cron,
             entrypoint=req.entrypoint,
-            timezone=req.timezone,
             deployment_name=req.deployment_name,
         )
         return {
