@@ -5,6 +5,8 @@ from typing import Optional
 
 from prefect.client.orchestration import get_client
 from prefect.deployments.runner import RunnerDeployment
+from prefect.deployments.schedules import create_deployment_schedule_create
+from prefect.client.schemas.schedules import CronSchedule
 
 from .exceptions import DeploymentNotFoundError, FlowRunNotFoundError, PrefectServiceError
 from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
@@ -65,23 +67,16 @@ class PrefectTaskService:
                 return d.id
         raise DeploymentNotFoundError(f"Deployment not found: {deployment_ref}")
 
-    def ensure_deployment(
+    def create_deployment(
         self,
         entrypoint: str,
         deployment_name: Optional[str] = None,
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
-        cron: Optional[str] = None,
     ) -> DeploymentInfo:
         deployment_name = deployment_name or self.config.default_deployment_name
         work_pool_name = work_pool_name or self.config.default_work_pool
         work_queue_name = work_queue_name or self.config.default_work_queue
-
-        existing = None
-        for d in self.list_deployments():
-            if d.name == deployment_name:
-                existing = d
-                break
 
         deployment_kwargs = {
             "entrypoint": entrypoint,
@@ -89,8 +84,6 @@ class PrefectTaskService:
             "work_pool_name": work_pool_name,
             "work_queue_name": work_queue_name,
         }
-        if cron:
-            deployment_kwargs["cron"] = cron
 
         deployment = RunnerDeployment.from_entrypoint(**deployment_kwargs)
         deployment_id = deployment.apply(work_pool_name=work_pool_name)
@@ -103,23 +96,33 @@ class PrefectTaskService:
 
         return self._to_deployment_info(saved)
 
-    def register_one_time_run(
+    def ensure_deployment(
+        self,
+        entrypoint: str,
+        deployment_name: Optional[str] = None,
+        work_pool_name: Optional[str] = None,
+        work_queue_name: Optional[str] = None,
+    ) -> DeploymentInfo:
+        return self.create_deployment(
+            entrypoint=entrypoint,
+            deployment_name=deployment_name,
+            work_pool_name=work_pool_name,
+            work_queue_name=work_queue_name,
+        )
+
+    def trigger_run(
         self,
         task_name: str,
         deployment_ref: str,
-        entrypoint: str,
         work_queue_name: Optional[str] = None,
     ) -> FlowRunInfo:
         work_queue_name = work_queue_name or self.config.default_work_queue
-
-        # One-off runs require an explicit deployment; ensure it exists from the provided entrypoint.
-        self.ensure_deployment(entrypoint=entrypoint, deployment_name=deployment_ref)
 
         try:
             deployment_id = self._resolve_deployment_id(deployment_ref)
         except DeploymentNotFoundError:
             raise DeploymentNotFoundError(
-                f"Deployment not found: {deployment_ref}. Please create it first via ensure_deployment(entrypoint=...)."
+                f"Deployment not found: {deployment_ref}. Please create it first via create_deployment(entrypoint=...)."
             )
 
         with self._client() as client:
@@ -131,23 +134,68 @@ class PrefectTaskService:
 
         return self._to_flow_run_info(flow_run)
 
+    def update_schedule(
+        self,
+        deployment_ref: str,
+        cron: str,
+        timezone: Optional[str] = None,
+        active: bool = True,
+        replace: bool = True,
+    ) -> DeploymentInfo:
+        deployment_id = self._resolve_deployment_id(deployment_ref)
+        schedule = CronSchedule(cron=cron, timezone=timezone)
+        schedule_create = create_deployment_schedule_create(schedule=schedule, active=active)
+
+        with self._client() as client:
+            if replace:
+                schedules = client.read_deployment_schedules(deployment_id=deployment_id)
+                for schedule in schedules:
+                    client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule.id)
+            client.create_deployment_schedules(
+                deployment_id=deployment_id,
+                schedules=[schedule_create],
+            )
+            saved = client.read_deployment(deployment_id)
+
+        if not saved:
+            raise PrefectServiceError("Updating schedule succeeded but reading deployment failed")
+
+        return self._to_deployment_info(saved)
+
+    def cancel_schedule(self, deployment_ref: str) -> DeploymentInfo:
+        deployment_id = self._resolve_deployment_id(deployment_ref)
+
+        with self._client() as client:
+            schedules = client.read_deployment_schedules(deployment_id=deployment_id)
+            for schedule in schedules:
+                client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule.id)
+            saved = client.read_deployment(deployment_id)
+
+        if not saved:
+            raise PrefectServiceError("Cancelling schedule succeeded but reading deployment failed")
+
+        return self._to_deployment_info(saved)
+
+    def register_one_time_run(
+        self,
+        task_name: str,
+        deployment_ref: str,
+        work_queue_name: Optional[str] = None,
+    ) -> FlowRunInfo:
+        return self.trigger_run(
+            task_name=task_name,
+            deployment_ref=deployment_ref,
+            work_queue_name=work_queue_name,
+        )
+
     def register_cron_task(
         self,
         cron: str,
         entrypoint: str,
         deployment_name: str,
-        flow_name: Optional[str] = None,
-        work_pool_name: Optional[str] = None,
-        work_queue_name: Optional[str] = None,
     ) -> DeploymentInfo:
-        _ = flow_name  # reserved for external naming; flow comes from entrypoint
-        return self.ensure_deployment(
-            entrypoint=entrypoint,
-            deployment_name=deployment_name,
-            work_pool_name=work_pool_name or self.config.default_work_pool,
-            work_queue_name=work_queue_name or self.config.default_work_queue,
-            cron=cron,
-        )
+        self.ensure_deployment(entrypoint=entrypoint, deployment_name=deployment_name)
+        return self.update_schedule(deployment_ref=deployment_name, cron=cron)
 
     def delete_deployment(self, deployment_ref: str, missing_ok: bool = True) -> bool:
         try:

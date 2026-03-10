@@ -15,6 +15,10 @@ __all__ = [
     "DeploymentInfo",
     "FlowRunInfo",
     "RunStatusInfo",
+    "create_deployment",
+    "trigger_run",
+    "update_schedule",
+    "cancel_schedule",
     "register_task",
     "list_deployments",
     "register_cron_task",
@@ -29,14 +33,21 @@ def _service() -> PrefectTaskService:
     return PrefectTaskService()
 
 
-def register_task(
-    task_name: str,
+def create_deployment(
     deployment_name: str,
     entrypoint: str,
-    timeout: int = 60,
 ):
-    _ = timeout
-    run = _service().register_one_time_run(task_name=task_name, deployment_ref=deployment_name, entrypoint=entrypoint)
+    deployment = _service().create_deployment(entrypoint=entrypoint, deployment_name=deployment_name)
+    print("✅ Deployment 已创建/更新")
+    print(f"   Deployment: {deployment.name}")
+    return deployment
+
+
+def trigger_run(
+    task_name: str,
+    deployment_name: str,
+):
+    run = _service().trigger_run(task_name=task_name, deployment_ref=deployment_name)
     print("=" * 50)
     print("📝 触发任务 (Deployment)")
     print("=" * 50)
@@ -47,6 +58,33 @@ def register_task(
     print(f"   Flow Run ID: {run.id}")
     print(f"   状态: {run.state_type}")
     return run
+
+
+def update_schedule(
+    deployment_ref: str,
+    cron: str,
+    timezone: str | None = None,
+):
+    deployment = _service().update_schedule(deployment_ref=deployment_ref, cron=cron, timezone=timezone)
+    print("✅ Cron 已更新")
+    print(f"   Deployment: {deployment.name}")
+    return deployment
+
+
+def cancel_schedule(
+    deployment_ref: str,
+):
+    deployment = _service().cancel_schedule(deployment_ref=deployment_ref)
+    print("✅ Cron 已取消")
+    print(f"   Deployment: {deployment.name}")
+    return deployment
+
+
+def register_task(
+    task_name: str,
+    deployment_name: str,
+):
+    return trigger_run(task_name=task_name, deployment_name=deployment_name)
 
 
 def list_deployments() -> list[DeploymentInfo]:
@@ -68,11 +106,8 @@ def register_cron_task(
     entrypoint: str,
     deployment_name: str,
 ):
-    deployment = _service().register_cron_task(
-        cron=cron,
-        entrypoint=entrypoint,
-        deployment_name=deployment_name,
-    )
+    _service().create_deployment(entrypoint=entrypoint, deployment_name=deployment_name)
+    deployment = _service().update_schedule(deployment_ref=deployment_name, cron=cron)
     print("✅ Cron 任务已注册")
     display_name = deployment_name or deployment.name
     print(f"   Deployment: {display_name}")

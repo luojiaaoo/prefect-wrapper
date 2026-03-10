@@ -1,7 +1,15 @@
 import argparse
 import os
 
-from . import delete_deployment, get_run_status, list_deployments, register_cron_task, register_task
+from . import (
+    cancel_schedule,
+    create_deployment,
+    delete_deployment,
+    get_run_status,
+    list_deployments,
+    trigger_run,
+    update_schedule,
+)
 
 
 def _parse_schedule_deployment(value: str) -> str:
@@ -20,23 +28,34 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
     client_parser.add_argument("--port", type=int, default=4200, help="Server端口")
     client_actions = client_parser.add_subparsers(dest="action", required=True)
 
-    run_parser = client_actions.add_parser("run", help="触发一次性任务")
-    run_parser.add_argument("task_name", nargs="+", help="任务名称")
-    run_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
-    run_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
-    run_parser.add_argument("--timeout", type=int, default=60, help="等待超时(秒)")
+    trigger_parser = client_actions.add_parser("trigger", help="触发一次性任务")
+    trigger_parser.add_argument("task_name", nargs="+", help="任务名称")
+    trigger_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
+    trigger_parser.add_argument("--timeout", type=int, default=60, help="等待超时(秒)")
 
     client_actions.add_parser("list", help="列出所有 deployments")
 
-    schedule_parser = client_actions.add_parser("schedule", help="注册 cron 定时任务")
-    schedule_parser.add_argument("--cron", required=True, help="cron 表达式，例如 '*/5 * * * *'")
-    schedule_parser.add_argument(
+    schedule_update_parser = client_actions.add_parser("schedule-update", help="更新 cron 定时任务")
+    schedule_update_parser.add_argument("--cron", required=True, help="cron 表达式，例如 '*/5 * * * *'")
+    schedule_update_parser.add_argument(
         "--deployment",
         type=_parse_schedule_deployment,
         required=True,
         help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
     )
-    schedule_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
+    schedule_update_parser.add_argument("--timezone", default=None, help="时区，例如 Asia/Shanghai")
+
+    schedule_cancel_parser = client_actions.add_parser("schedule-cancel", help="取消 cron 定时任务")
+    schedule_cancel_parser.add_argument(
+        "--deployment",
+        type=_parse_schedule_deployment,
+        required=True,
+        help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
+    )
+
+    create_parser = client_actions.add_parser("create", help="创建或更新 deployment")
+    create_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
+    create_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
 
     delete_parser = client_actions.add_parser("delete", help="删除 deployment")
     delete_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
@@ -53,20 +72,25 @@ def add_client_module_parser(modules) -> None:
 def handle_client_mode(args) -> None:
     os.environ["PREFECT_API_URL"] = f"http://{args.host}:{args.port}/api"
 
-    if args.action == "run":
-        register_task(
+    if args.action == "trigger":
+        trigger_run(
             " ".join(args.task_name),
             deployment_name=args.deployment,
-            entrypoint=args.entrypoint,
-            timeout=args.timeout,
         )
     elif args.action == "list":
         list_deployments()
-    elif args.action == "schedule":
-        register_cron_task(
+    elif args.action == "schedule-update":
+        update_schedule(
+            deployment_ref=args.deployment,
             cron=args.cron,
-            entrypoint=args.entrypoint,
+            timezone=args.timezone,
+        )
+    elif args.action == "schedule-cancel":
+        cancel_schedule(deployment_ref=args.deployment)
+    elif args.action == "create":
+        create_deployment(
             deployment_name=args.deployment,
+            entrypoint=args.entrypoint,
         )
     elif args.action == "delete":
         delete_deployment(deployment_ref=args.deployment)

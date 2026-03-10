@@ -4,7 +4,7 @@
 
 - **server**：启动 Prefect Server + UI
 - **executor**：启动 Prefect Worker
-- **client**：任务管理（查看 / 触发一次性任务 / 注册 cron / 删除 / 查询状态）
+- **client**：任务管理（查看 / 触发一次性任务 / 更新/取消 cron / 删除 / 查询状态）
 
 并且 `client` 已解耦为可复用的 Python 服务层，可直接搬到 FastAPI 项目里使用。
 
@@ -82,10 +82,16 @@ python -m client list
 python -m client list
 
 # 触发一次性任务
-python -m client run "my-task" --deployment task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
+python -m client trigger "my-task" --deployment task-run-deployment
 
-# 注册/更新 cron 定时任务
-python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --deployment task-run-deployment
+# 更新 cron 定时任务
+python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment
+
+# 取消 cron 定时任务
+python -m client schedule-cancel --deployment task-run-deployment
+
+# 创建/更新 deployment
+python -m client create --deployment task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
 
 # 删除 deployment
 python -m client delete --deployment task-run-deployment
@@ -105,35 +111,58 @@ python -m client status --run-id <FLOW_RUN_ID>
 
 ## 5. Python 代码示例（可直接搬到 FastAPI）
 
-### 5.1 一次性任务
+### 5.1 创建 deployment
 
 ```python
 from client.service import PrefectTaskService
 
 svc = PrefectTaskService()
-run = svc.register_one_time_run(
-    task_name="demo-once",
-    deployment_ref="task-run-deployment",
-    entrypoint="flows.task_flow:my_task_flow",
-)
-print(run.id, run.state_type)
-```
-
-### 5.2 注册 cron 定时任务
-
-```python
-from client.service import PrefectTaskService
-
-svc = PrefectTaskService()
-deployment = svc.register_cron_task(
-    cron="*/10 * * * *",
-    entrypoint="flows.task_flow:my_task_flow",
+deployment = svc.create_deployment(
     deployment_name="task-run-deployment",
+    entrypoint="flows.task_flow:my_task_flow",
 )
 print(deployment.name)
 ```
 
-### 5.3 查看已有任务（deployments）
+### 5.2 触发一次性任务
+
+```python
+from client.service import PrefectTaskService
+
+svc = PrefectTaskService()
+run = svc.trigger_run(
+    task_name="demo-once",
+    deployment_ref="task-run-deployment",
+)
+print(run.id, run.state_type)
+```
+
+### 5.3 更新 cron 定时任务
+
+```python
+from client.service import PrefectTaskService
+
+svc = PrefectTaskService()
+deployment = svc.update_schedule(
+    deployment_ref="task-run-deployment",
+    cron="*/10 * * * *",
+)
+print(deployment.name)
+```
+
+### 5.4 取消 cron 定时任务
+
+```python
+from client.service import PrefectTaskService
+
+svc = PrefectTaskService()
+deployment = svc.cancel_schedule(
+    deployment_ref="task-run-deployment",
+)
+print(deployment.name)
+```
+
+### 5.5 查看已有任务（deployments）
 
 ```python
 from client.service import PrefectTaskService
@@ -143,7 +172,7 @@ for d in svc.list_deployments():
     print(d.name, d.work_pool_name, d.work_queue_name)
 ```
 
-### 5.4 查询任务完成状态
+### 5.6 查询任务完成状态
 
 ```python
 from client.service import PrefectTaskService
@@ -153,7 +182,7 @@ status = svc.get_run_status("<FLOW_RUN_ID>")
 print(status.state_type, status.is_terminal, status.is_completed, status.is_failed)
 ```
 
-### 5.5 删除任务模板（deployment）
+### 5.7 删除任务模板（deployment）
 
 ```python
 from client.service import PrefectTaskService
@@ -254,7 +283,7 @@ def list_deployments():
 @app.post("/runs/once")
 def run_once(req: RunOnceRequest):
     try:
-        run = svc.register_one_time_run(task_name=req.task_name, deployment_ref=req.deployment, entrypoint=req.entrypoint)
+        run = svc.trigger_run(task_name=req.task_name, deployment_ref=req.deployment)
         return {
             "run_id": run.id,
             "state_type": run.state_type,
@@ -269,10 +298,13 @@ def run_once(req: RunOnceRequest):
 @app.post("/runs/schedule")
 def schedule(req: CronRequest):
     try:
-        d = svc.register_cron_task(
-            cron=req.cron,
-            entrypoint=req.entrypoint,
+        svc.create_deployment(
             deployment_name=req.deployment_name,
+            entrypoint=req.entrypoint,
+        )
+        d = svc.update_schedule(
+            deployment_ref=req.deployment_name,
+            cron=req.cron,
         )
         return {
             "deployment_id": d.id,
