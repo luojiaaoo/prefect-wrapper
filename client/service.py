@@ -16,7 +16,6 @@ class PrefectClientConfig:
     prefect_home: Optional[str] = None
     default_work_pool: str = "task-pool"
     default_work_queue: str = "task-queue"
-    default_entrypoint: str = "flows.task_flow:my_task_flow"
     default_flow_name: str = "my-task-flow"
     default_deployment_name: str = "task-run-deployment"
 
@@ -70,15 +69,14 @@ class PrefectTaskService:
 
     def ensure_deployment(
         self,
+        entrypoint: str,
         deployment_name: Optional[str] = None,
-        entrypoint: Optional[str] = None,
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
         cron: Optional[str] = None,
         timezone: str = "UTC",
     ) -> DeploymentInfo:
         deployment_name = deployment_name or self.config.default_deployment_name
-        entrypoint = entrypoint or self.config.default_entrypoint
         work_pool_name = work_pool_name or self.config.default_work_pool
         work_queue_name = work_queue_name or self.config.default_work_queue
 
@@ -121,8 +119,9 @@ class PrefectTaskService:
         try:
             deployment_id = self._resolve_deployment_id(deployment_ref)
         except DeploymentNotFoundError:
-            self.ensure_deployment()
-            deployment_id = self._resolve_deployment_id(deployment_ref)
+            raise DeploymentNotFoundError(
+                f"Deployment not found: {deployment_ref}. Please create it first via ensure_deployment(entrypoint=...)."
+            )
 
         with self._client() as client:
             flow_run = client.create_flow_run_from_deployment(
@@ -136,17 +135,17 @@ class PrefectTaskService:
     def register_cron_task(
         self,
         cron: str,
+        entrypoint: str,
         deployment_name: Optional[str] = None,
         flow_name: Optional[str] = None,
         timezone: str = "UTC",
         work_pool_name: Optional[str] = None,
         work_queue_name: Optional[str] = None,
-        entrypoint: Optional[str] = None,
     ) -> DeploymentInfo:
         _ = flow_name  # reserved for external naming; flow comes from entrypoint
         return self.ensure_deployment(
+            entrypoint=entrypoint,
             deployment_name=deployment_name or self.config.default_deployment_name,
-            entrypoint=entrypoint or self.config.default_entrypoint,
             work_pool_name=work_pool_name or self.config.default_work_pool,
             work_queue_name=work_queue_name or self.config.default_work_queue,
             cron=cron,

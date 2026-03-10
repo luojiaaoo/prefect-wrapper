@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 """Compatibility wrappers for reusable Prefect client service."""
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
-from .service import PrefectClientConfig, PrefectTaskService
+
+if TYPE_CHECKING:
+    from .service import PrefectClientConfig, PrefectTaskService
 
 
 __all__ = [
@@ -20,6 +24,8 @@ __all__ = [
 
 
 def _service() -> PrefectTaskService:
+    from .service import PrefectTaskService
+
     return PrefectTaskService()
 
 
@@ -56,8 +62,18 @@ def list_deployments() -> list[DeploymentInfo]:
     return items
 
 
-def register_cron_task(cron: str, deployment_name: str = "task-run-deployment", timezone: str = "UTC"):
-    deployment = _service().register_cron_task(cron=cron, deployment_name=deployment_name, timezone=timezone)
+def register_cron_task(
+    cron: str,
+    entrypoint: str,
+    deployment_name: str = "task-run-deployment",
+    timezone: str = "UTC",
+):
+    deployment = _service().register_cron_task(
+        cron=cron,
+        entrypoint=entrypoint,
+        deployment_name=deployment_name,
+        timezone=timezone,
+    )
     print("✅ Cron 任务已注册")
     print(f"   Deployment: {deployment.full_name}")
     print(f"   Cron: {cron} ({timezone})")

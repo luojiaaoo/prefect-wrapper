@@ -32,6 +32,9 @@ def run_executor(
     env = os.environ.copy()
     env["PREFECT_HOME"] = PREFECT_WORKER_DIR
     env["PREFECT_API_URL"] = api_url
+    # 统一子进程编码，避免 Windows 下默认本地编码导致 Prefect 按 UTF-8 解码失败
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
 
     # 启动 Worker
     subprocess.run([

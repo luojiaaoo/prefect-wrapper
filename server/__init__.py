@@ -57,7 +57,7 @@ def run_server_local(host: str = "127.0.0.1", port: int = 4200):
     print("=" * 50)
     print(f"📊 UI 地址: http://{host}:{port}")
     print(f"📡 API 地址: http://{host}:{port}/api")
-    print("💡 推荐: 使用 Docker 模式 (python main.py server --docker)")
+    print("💡 推荐: 使用 Docker 模式 (python -m server --docker)")
     print("=" * 50)
 
     os.makedirs(PREFECT_DATA, exist_ok=True)

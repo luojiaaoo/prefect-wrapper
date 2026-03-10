@@ -14,16 +14,19 @@
 
 ```text
 example-perfert/
-├── main.py
 ├── requirements.txt
 ├── flows/
 │   └── task_flow.py
 ├── server/
-│   └── __init__.py
+│   ├── __init__.py
+│   └── __main__.py          # 独立入口：python -m server
 ├── executor/
-│   └── __init__.py
+│   ├── __init__.py
+│   └── __main__.py          # 独立入口：python -m executor
 └── client/
     ├── __init__.py          # 兼容层 + CLI 封装
+    ├── __main__.py          # 独立入口：python -m client
+    ├── cli.py               # client CLI 解析与分发
     ├── service.py           # 核心服务层（推荐直接复用）
     ├── models.py            # 返回模型
     └── exceptions.py        # 异常定义
@@ -46,7 +49,7 @@ pip install -r requirements.txt
 ### 终端 1：启动 Server
 
 ```bash
-python main.py server
+python -m server
 ```
 
 - UI: `http://127.0.0.1:4200`
@@ -55,7 +58,7 @@ python main.py server
 ### 终端 2：启动 Worker
 
 ```bash
-python main.py executor
+python -m executor
 ```
 
 默认使用：
@@ -65,7 +68,7 @@ python main.py executor
 ### 终端 3：调用 Client
 
 ```bash
-python main.py client list
+python -m client list
 ```
 
 ---
@@ -76,19 +79,19 @@ python main.py client list
 
 ```bash
 # 查看 deployment 列表
-python main.py client list
+python -m client list
 
 # 触发一次性任务
-python main.py client run "my-task"
+python -m client run "my-task"
 
 # 注册/更新 cron 定时任务
-python main.py client schedule --cron "*/5 * * * *" --timezone "Asia/Shanghai"
+python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow" --timezone "Asia/Shanghai"
 
 # 删除 deployment
-python main.py client delete --deployment my-task-flow/task-run-deployment
+python -m client delete --deployment my-task-flow/task-run-deployment
 
 # 查询任务状态
-python main.py client status --run-id <FLOW_RUN_ID>
+python -m client status --run-id <FLOW_RUN_ID>
 ```
 
 常用参数：
@@ -120,6 +123,7 @@ from client.service import PrefectTaskService
 svc = PrefectTaskService()
 deployment = svc.register_cron_task(
     cron="*/10 * * * *",
+    entrypoint="flows.task_flow:my_task_flow",
     timezone="Asia/Shanghai",
 )
 print(deployment.full_name)
@@ -178,13 +182,13 @@ svc.delete_deployment("my-task-flow/task-run-deployment")
 先执行一次：
 
 ```bash
-python main.py client list
+python -m client list
 ```
 
 若无 deployment，再执行：
 
 ```bash
-python main.py client schedule --cron "*/5 * * * *"
+python -m client schedule --cron "*/5 * * * *" --entrypoint "flows.task_flow:my_task_flow"
 ```
 
 或直接触发一次 `run`，会自动确保 deployment 存在。
@@ -215,6 +219,7 @@ class RunOnceRequest(BaseModel):
 
 class CronRequest(BaseModel):
     cron: str
+    entrypoint: str = "flows.task_flow:my_task_flow"
     timezone: str = "Asia/Shanghai"
     deployment_name: str = "task-run-deployment"
 
@@ -263,6 +268,7 @@ def schedule(req: CronRequest):
     try:
         d = svc.register_cron_task(
             cron=req.cron,
+            entrypoint=req.entrypoint,
             timezone=req.timezone,
             deployment_name=req.deployment_name,
         )
