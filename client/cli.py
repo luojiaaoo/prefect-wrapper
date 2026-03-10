@@ -45,6 +45,7 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
         help="Deployment 名称或引用，例如 task-run-deployment 或 flow/task-run-deployment",
     )
     schedule_update_parser.add_argument("--timezone", default=None, help="时区，例如 Asia/Shanghai")
+    schedule_update_parser.add_argument("--params", default=None, help="JSON 参数，例如 '{\"task_name\": \"demo\"}'")
 
     schedule_cancel_parser = client_actions.add_parser("schedule-cancel", help="取消 cron 定时任务")
     schedule_cancel_parser.add_argument(
@@ -82,10 +83,12 @@ def handle_client_mode(args) -> None:
     elif args.action == "list":
         list_deployments()
     elif args.action == "schedule-update":
+        params = json.loads(args.params) if args.params else None
         update_schedule(
             deployment_ref=args.deployment,
             cron=args.cron,
             timezone=args.timezone,
+            parameters=params,
         )
     elif args.action == "schedule-cancel":
         cancel_schedule(deployment_ref=args.deployment)

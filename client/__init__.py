@@ -64,8 +64,14 @@ def update_schedule(
     deployment_ref: str,
     cron: str,
     timezone: str | None = None,
+    parameters: dict | None = None,
 ):
-    deployment = _service().update_schedule(deployment_ref=deployment_ref, cron=cron, timezone=timezone)
+    deployment = _service().update_schedule(
+        deployment_ref=deployment_ref,
+        cron=cron,
+        timezone=timezone,
+        parameters=parameters,
+    )
     print("✅ Cron 已更新")
     print(f"   Deployment: {deployment.name}")
     return deployment

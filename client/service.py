@@ -140,21 +140,29 @@ class PrefectTaskService:
         cron: str,
         timezone: Optional[str] = None,
         active: bool = True,
-        replace: bool = True,
+        parameters: Optional[dict] = None,
     ) -> DeploymentInfo:
         deployment_id = self._resolve_deployment_id(deployment_ref)
-        schedule = CronSchedule(cron=cron, timezone=timezone)
-        schedule_create = create_deployment_schedule_create(schedule=schedule, active=active)
 
         with self._client() as client:
-            if replace:
-                schedules = client.read_deployment_schedules(deployment_id=deployment_id)
-                for schedule in schedules:
-                    client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule.id)
+            schedules = client.read_deployment_schedules(deployment_id=deployment_id)
+
+            schedule = CronSchedule(cron=cron, timezone=timezone)
+            schedule_create = create_deployment_schedule_create(schedule=schedule, active=active)
+            if parameters:
+                if hasattr(schedule_create, "model_copy"):
+                    schedule_create = schedule_create.model_copy(update={"parameters": parameters})
+                else:
+                    schedule_create.parameters = parameters
+
+            if schedules:
+                for schedule_item in schedules:
+                    client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule_item.id)
             client.create_deployment_schedules(
                 deployment_id=deployment_id,
                 schedules=[schedule_create],
             )
+
             saved = client.read_deployment(deployment_id)
 
         if not saved:

@@ -85,7 +85,7 @@ python -m client list
 python -m client trigger --deployment task-run-deployment --params '{"task_name": "my-task"}'
 
 # 更新 cron 定时任务
-python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment
+python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment --params '{"task_name":"demo"}'
 
 # 取消 cron 定时任务
 python -m client schedule-cancel --deployment task-run-deployment
@@ -146,6 +146,7 @@ svc = PrefectTaskService()
 deployment = svc.update_schedule(
     deployment_ref="task-run-deployment",
     cron="*/10 * * * *",
+    parameters={"task_name": "demo-once"},
 )
 print(deployment.name)
 ```
