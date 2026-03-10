@@ -112,8 +112,8 @@ class PrefectTaskService:
 
     def trigger_run(
         self,
-        task_name: str,
         deployment_ref: str,
+        parameters: dict,
         work_queue_name: Optional[str] = None,
     ) -> FlowRunInfo:
         work_queue_name = work_queue_name or self.config.default_work_queue
@@ -128,7 +128,7 @@ class PrefectTaskService:
         with self._client() as client:
             flow_run = client.create_flow_run_from_deployment(
                 deployment_id=deployment_id,
-                parameters={"task_name": task_name},
+                parameters=parameters,
                 work_queue_name=work_queue_name,
             )
 
@@ -178,13 +178,13 @@ class PrefectTaskService:
 
     def register_one_time_run(
         self,
-        task_name: str,
+        parameters: dict,
         deployment_ref: str,
         work_queue_name: Optional[str] = None,
     ) -> FlowRunInfo:
         return self.trigger_run(
-            task_name=task_name,
             deployment_ref=deployment_ref,
+            parameters=parameters,
             work_queue_name=work_queue_name,
         )
 

@@ -82,7 +82,7 @@ python -m client list
 python -m client list
 
 # 触发一次性任务
-python -m client trigger "my-task" --deployment task-run-deployment
+python -m client trigger --deployment task-run-deployment --params '{"task_name": "my-task"}'
 
 # 更新 cron 定时任务
 python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment
@@ -131,8 +131,8 @@ from client.service import PrefectTaskService
 
 svc = PrefectTaskService()
 run = svc.trigger_run(
-    task_name="demo-once",
     deployment_ref="task-run-deployment",
+    parameters={"task_name": "demo-once"},
 )
 print(run.id, run.state_type)
 ```
@@ -283,7 +283,10 @@ def list_deployments():
 @app.post("/runs/once")
 def run_once(req: RunOnceRequest):
     try:
-        run = svc.trigger_run(task_name=req.task_name, deployment_ref=req.deployment)
+        run = svc.trigger_run(
+            deployment_ref=req.deployment,
+            parameters={"task_name": req.task_name},
+        )
         return {
             "run_id": run.id,
             "state_type": run.state_type,

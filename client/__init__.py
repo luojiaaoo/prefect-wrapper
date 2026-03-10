@@ -44,15 +44,15 @@ def create_deployment(
 
 
 def trigger_run(
-    task_name: str,
     deployment_name: str,
+    parameters: dict,
 ):
-    run = _service().trigger_run(task_name=task_name, deployment_ref=deployment_name)
+    run = _service().trigger_run(deployment_ref=deployment_name, parameters=parameters)
     print("=" * 50)
     print("📝 触发任务 (Deployment)")
     print("=" * 50)
-    print(f"📋 任务名称: {task_name}")
     print(f"🚀 Deployment: {deployment_name}")
+    print(f"📦 参数: {parameters}")
     print("=" * 50)
     print("\n✅ 任务触发成功!")
     print(f"   Flow Run ID: {run.id}")
@@ -81,10 +81,10 @@ def cancel_schedule(
 
 
 def register_task(
-    task_name: str,
     deployment_name: str,
+    parameters: dict,
 ):
-    return trigger_run(task_name=task_name, deployment_name=deployment_name)
+    return trigger_run(deployment_name=deployment_name, parameters=parameters)
 
 
 def list_deployments() -> list[DeploymentInfo]:

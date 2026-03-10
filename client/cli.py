@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 
 from . import (
@@ -29,8 +30,8 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
     client_actions = client_parser.add_subparsers(dest="action", required=True)
 
     trigger_parser = client_actions.add_parser("trigger", help="触发一次性任务")
-    trigger_parser.add_argument("task_name", nargs="+", help="任务名称")
     trigger_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
+    trigger_parser.add_argument("--params", required=True, help="JSON 参数，例如 '{\"name\": \"demo\"}'")
     trigger_parser.add_argument("--timeout", type=int, default=60, help="等待超时(秒)")
 
     client_actions.add_parser("list", help="列出所有 deployments")
@@ -73,9 +74,10 @@ def handle_client_mode(args) -> None:
     os.environ["PREFECT_API_URL"] = f"http://{args.host}:{args.port}/api"
 
     if args.action == "trigger":
+        params = json.loads(args.params)
         trigger_run(
-            " ".join(args.task_name),
             deployment_name=args.deployment,
+            parameters=params,
         )
     elif args.action == "list":
         list_deployments()
