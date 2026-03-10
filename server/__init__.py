@@ -41,7 +41,7 @@ def run_server_docker(host: str = "127.0.0.1", port: int = 4200):
         "--name", "prefect-server",
         "-p", f"{port}:4200",
         "-p", "4201:4201",
-        "prefecthq/prefect:3"
+        "prefecthq/prefect:sha-69be6c8-python3.12-conda"
     ])
 
     print("⏳ 等待 Server 启动...")
