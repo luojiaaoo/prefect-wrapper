@@ -4,31 +4,31 @@ import os
 from enum import StrEnum
 from typing import Optional
 
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+class PrefectClientConfig(StrEnum):
+    api_url: str = "http://127.0.0.1:4200/api"
+
+if "PREFECT_API_URL" not in os.environ:
+    os.environ["PREFECT_API_URL"] = PrefectClientConfig.api_url
+
 from prefect.client.orchestration import get_client
 from prefect.deployments.runner import RunnerDeployment
 from prefect.deployments.schedules import create_deployment_schedule_create
 from prefect.client.schemas.schedules import CronSchedule
 
-from .exceptions import DeploymentNotFoundError, FlowRunNotFoundError, PrefectServiceError
+from .exceptions import (
+    DeploymentNotFoundError,
+    FlowRunNotFoundError,
+    PrefectServiceError,
+)
 from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
 
 logger = logging.getLogger(__name__)
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-class PrefectClientConfig(StrEnum):
-    api_url: str = "http://127.0.0.1:4200/api"
-    prefect_home: str = os.path.join(project_root, ".prefect_client")
-
-
 
 class PrefectTaskService:
-    def __init__(self):
-        if "PREFECT_HOME" not in os.environ:
-            os.environ["PREFECT_HOME"] = PrefectClientConfig.prefect_home
-        if "PREFECT_API_URL" not in os.environ:
-            os.environ["PREFECT_API_URL"] = PrefectClientConfig.api_url
-
     def _client(self):
         return get_client(sync_client=True)
 
@@ -47,7 +47,9 @@ class PrefectTaskService:
                 else:
                     schedule_type = None
                 cron = getattr(schedule_item, "cron", None) if schedule_item else None
-                timezone = getattr(schedule_item, "timezone", None) if schedule_item else None
+                timezone = (
+                    getattr(schedule_item, "timezone", None) if schedule_item else None
+                )
                 parameters = getattr(schedule, "parameters", None)
                 parameters_text = None
                 if parameters is not None:
@@ -78,9 +80,13 @@ class PrefectTaskService:
     def _to_flow_run_info(self, r) -> FlowRunInfo:
         return FlowRunInfo(
             id=str(r.id),
-            deployment_id=str(r.deployment_id) if getattr(r, "deployment_id", None) else None,
+            deployment_id=str(r.deployment_id)
+            if getattr(r, "deployment_id", None)
+            else None,
             name=getattr(r, "name", None),
-            state_type=str(getattr(r, "state_type", "")) if getattr(r, "state_type", None) else None,
+            state_type=str(getattr(r, "state_type", ""))
+            if getattr(r, "state_type", None)
+            else None,
             state_name=getattr(r, "state_name", None),
             created=getattr(r, "created", None),
             expected_start_time=getattr(r, "expected_start_time", None),
@@ -135,7 +141,9 @@ class PrefectTaskService:
             saved = client.read_deployment(deployment_id)
 
         if not saved:
-            raise PrefectServiceError("Deployment apply succeeded but reading deployment failed")
+            raise PrefectServiceError(
+                "Deployment apply succeeded but reading deployment failed"
+            )
 
         return self._to_deployment_info(saved)
 
@@ -189,16 +197,22 @@ class PrefectTaskService:
             schedules = client.read_deployment_schedules(deployment_id=deployment_id)
 
             schedule = CronSchedule(cron=cron, timezone=timezone)
-            schedule_create = create_deployment_schedule_create(schedule=schedule, active=active)
+            schedule_create = create_deployment_schedule_create(
+                schedule=schedule, active=active
+            )
             if parameters:
                 if hasattr(schedule_create, "model_copy"):
-                    schedule_create = schedule_create.model_copy(update={"parameters": parameters})
+                    schedule_create = schedule_create.model_copy(
+                        update={"parameters": parameters}
+                    )
                 else:
                     schedule_create.parameters = parameters
 
             if schedules:
                 for schedule_item in schedules:
-                    client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule_item.id)
+                    client.delete_deployment_schedule(
+                        deployment_id=deployment_id, schedule_id=schedule_item.id
+                    )
             client.create_deployment_schedules(
                 deployment_id=deployment_id,
                 schedules=[schedule_create],
@@ -207,7 +221,9 @@ class PrefectTaskService:
             saved = client.read_deployment(deployment_id)
 
         if not saved:
-            raise PrefectServiceError("Updating schedule succeeded but reading deployment failed")
+            raise PrefectServiceError(
+                "Updating schedule succeeded but reading deployment failed"
+            )
 
         return self._to_deployment_info(saved)
 
@@ -223,7 +239,9 @@ class PrefectTaskService:
             if not schedules:
                 raise PrefectServiceError("No schedule found for deployment")
             if len(schedules) > 1:
-                raise PrefectServiceError("Multiple schedules found; please keep only one schedule")
+                raise PrefectServiceError(
+                    "Multiple schedules found; please keep only one schedule"
+                )
 
             schedule_item = schedules[0]
             schedule_create = create_deployment_schedule_create(
@@ -231,11 +249,15 @@ class PrefectTaskService:
                 active=schedule_item.active,
             )
             if hasattr(schedule_create, "model_copy"):
-                schedule_create = schedule_create.model_copy(update={"parameters": parameters})
+                schedule_create = schedule_create.model_copy(
+                    update={"parameters": parameters}
+                )
             else:
                 schedule_create.parameters = parameters
 
-            client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule_item.id)
+            client.delete_deployment_schedule(
+                deployment_id=deployment_id, schedule_id=schedule_item.id
+            )
             client.create_deployment_schedules(
                 deployment_id=deployment_id,
                 schedules=[schedule_create],
@@ -244,7 +266,9 @@ class PrefectTaskService:
             saved = client.read_deployment(deployment_id)
 
         if not saved:
-            raise PrefectServiceError("Updating schedule parameters succeeded but reading deployment failed")
+            raise PrefectServiceError(
+                "Updating schedule parameters succeeded but reading deployment failed"
+            )
 
         return self._to_deployment_info(saved)
 
@@ -254,11 +278,15 @@ class PrefectTaskService:
         with self._client() as client:
             schedules = client.read_deployment_schedules(deployment_id=deployment_id)
             for schedule in schedules:
-                client.delete_deployment_schedule(deployment_id=deployment_id, schedule_id=schedule.id)
+                client.delete_deployment_schedule(
+                    deployment_id=deployment_id, schedule_id=schedule.id
+                )
             saved = client.read_deployment(deployment_id)
 
         if not saved:
-            raise PrefectServiceError("Cancelling schedule succeeded but reading deployment failed")
+            raise PrefectServiceError(
+                "Cancelling schedule succeeded but reading deployment failed"
+            )
 
         return self._to_deployment_info(saved)
 
@@ -309,7 +337,8 @@ class PrefectTaskService:
             flow_run_id=str(flow_run.id),
             state_type=state_type,
             state_name=state_name,
-            is_terminal=state_type in {"COMPLETED", "FAILED", "CANCELLED", "CRASHED", "TIMEDOUT"},
+            is_terminal=state_type
+            in {"COMPLETED", "FAILED", "CANCELLED", "CRASHED", "TIMEDOUT"},
             is_completed=state_type == "COMPLETED",
             is_failed=state_type in {"FAILED", "CRASHED", "TIMEDOUT"},
             is_running=state_type == "RUNNING",
