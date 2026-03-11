@@ -1,8 +1,7 @@
 import json
 import logging
 import os
-from dataclasses import dataclass
-from datetime import datetime
+from enum import StrEnum
 from typing import Optional
 
 from prefect.client.orchestration import get_client
@@ -15,22 +14,20 @@ from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
 
 logger = logging.getLogger(__name__)
 
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-@dataclass
-class PrefectClientConfig:
+class PrefectClientConfig(StrEnum):
     api_url: str = "http://127.0.0.1:4200/api"
-    prefect_home: Optional[str] = None
+    prefect_home: str = os.path.join(project_root, ".prefect_client")
 
 
 
 class PrefectTaskService:
-    def __init__(self, config: Optional[PrefectClientConfig] = None):
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        default_home = os.path.join(project_root, ".prefect_data")
-        self.config = config or PrefectClientConfig(prefect_home=default_home)
-        if self.config.prefect_home:
-            os.environ["PREFECT_HOME"] = self.config.prefect_home
-        os.environ["PREFECT_API_URL"] = self.config.api_url
+    def __init__(self):
+        if "PREFECT_HOME" not in os.environ:
+            os.environ["PREFECT_HOME"] = PrefectClientConfig.prefect_home
+        if "PREFECT_API_URL" not in os.environ:
+            os.environ["PREFECT_API_URL"] = PrefectClientConfig.api_url
 
     def _client(self):
         return get_client(sync_client=True)
