@@ -133,7 +133,12 @@ def list_deployments() -> list[DeploymentInfo]:
     print(f"\n📋 部署列表 (共 {len(items)} 个):")
     print("-" * 50)
     for item in items:
-        print(f"  • {item.name} | pool={item.work_pool_name} | queue={item.work_queue_name}")
+        print(
+            "  • "
+            f"{item.name} | flow={item.flow_name or item.flow_id} | "
+            f"pool={item.work_pool_name} | queue={item.work_queue_name} | "
+            f"entrypoint={item.entrypoint}"
+        )
     print("-" * 50)
     return items
 

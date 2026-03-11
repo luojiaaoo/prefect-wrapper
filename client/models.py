@@ -7,7 +7,9 @@ from typing import Optional
 class DeploymentInfo:
     id: str
     name: str
-    flow_name: str
+    flow_name: Optional[str] = None
+    flow_id: Optional[str] = None
+    entrypoint: Optional[str] = None
     work_pool_name: Optional[str] = None
     work_queue_name: Optional[str] = None
 

@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,6 +11,8 @@ from prefect.client.schemas.schedules import CronSchedule
 
 from .exceptions import DeploymentNotFoundError, FlowRunNotFoundError, PrefectServiceError
 from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -32,11 +35,15 @@ class PrefectTaskService:
         return get_client(sync_client=True)
 
     def _to_deployment_info(self, d) -> DeploymentInfo:
-        flow_name = d.flow_name
+        flow_name = getattr(d, "flow_name", None)
+        flow_id = getattr(d, "flow_id", None)
+        entrypoint = getattr(d, "entrypoint", None)
         return DeploymentInfo(
             id=str(d.id),
             name=d.name,
             flow_name=flow_name,
+            flow_id=str(flow_id) if flow_id else None,
+            entrypoint=entrypoint,
             work_pool_name=d.work_pool_name,
             work_queue_name=d.work_queue_name,
         )
@@ -55,7 +62,23 @@ class PrefectTaskService:
     def list_deployments(self) -> list[DeploymentInfo]:
         with self._client() as client:
             deployments = client.read_deployments()
-        return [self._to_deployment_info(d) for d in deployments]
+            items = [self._to_deployment_info(d) for d in deployments]
+            for item in items:
+                if item.flow_name or not item.flow_id:
+                    if not item.flow_name and not item.flow_id:
+                        logger.warning("Missing flow_id for deployment %s", item.id)
+                    continue
+                try:
+                    flow = client.read_flow(item.flow_id)
+                except Exception as exc:
+                    logger.warning("Failed to read flow %s: %s", item.flow_id, exc)
+                    flow = None
+                flow_name = getattr(flow, "name", None) if flow else None
+                if flow_name:
+                    item.flow_name = flow_name
+                else:
+                    logger.warning("Missing flow_name for flow %s", item.flow_id)
+        return items
 
     def _resolve_deployment_id(self, deployment_ref: str) -> str:
         deployment_ref = deployment_ref.strip()
