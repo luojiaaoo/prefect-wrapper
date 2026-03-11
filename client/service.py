@@ -38,6 +38,25 @@ class PrefectTaskService:
         flow_name = getattr(d, "flow_name", None)
         flow_id = getattr(d, "flow_id", None)
         entrypoint = getattr(d, "entrypoint", None)
+        schedules = getattr(d, "schedules", None)
+        schedule_descriptions = None
+        if schedules:
+            schedule_descriptions = []
+            for schedule in schedules:
+                schedule_item = getattr(schedule, "schedule", None)
+                if schedule_item:
+                    schedule_type = type(schedule_item).__name__
+                else:
+                    schedule_type = None
+                cron = getattr(schedule_item, "cron", None) if schedule_item else None
+                timezone = getattr(schedule_item, "timezone", None) if schedule_item else None
+                if cron:
+                    description = f"{schedule_type}:{cron}"
+                else:
+                    description = schedule_type or "schedule"
+                if timezone:
+                    description = f"{description} ({timezone})"
+                schedule_descriptions.append(description)
         return DeploymentInfo(
             id=str(d.id),
             name=d.name,
@@ -46,6 +65,7 @@ class PrefectTaskService:
             entrypoint=entrypoint,
             work_pool_name=d.work_pool_name,
             work_queue_name=d.work_queue_name,
+            schedules=schedule_descriptions,
         )
 
     def _to_flow_run_info(self, r) -> FlowRunInfo:

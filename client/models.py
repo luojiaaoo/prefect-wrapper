@@ -12,6 +12,7 @@ class DeploymentInfo:
     entrypoint: Optional[str] = None
     work_pool_name: Optional[str] = None
     work_queue_name: Optional[str] = None
+    schedules: Optional[list[str]] = None
 
 
 @dataclass
