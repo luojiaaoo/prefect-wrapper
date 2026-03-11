@@ -16,10 +16,7 @@ from .models import DeploymentInfo, FlowRunInfo, RunStatusInfo
 class PrefectClientConfig:
     api_url: str = "http://127.0.0.1:4200/api"
     prefect_home: Optional[str] = None
-    default_work_pool: str = "task-pool"
-    default_work_queue: str = "task-queue"
-    default_flow_name: str = "my-task-flow"
-    default_deployment_name: str = "task-run-deployment"
+
 
 
 class PrefectTaskService:
@@ -35,13 +32,13 @@ class PrefectTaskService:
         return get_client(sync_client=True)
 
     def _to_deployment_info(self, d) -> DeploymentInfo:
-        flow_name = getattr(d, "flow_name", "") or self.config.default_flow_name
+        flow_name = d.flow_name
         return DeploymentInfo(
             id=str(d.id),
             name=d.name,
             flow_name=flow_name,
-            work_pool_name=getattr(d, "work_pool_name", None),
-            work_queue_name=getattr(d, "work_queue_name", None),
+            work_pool_name=d.work_pool_name,
+            work_queue_name=d.work_queue_name,
         )
 
     def _to_flow_run_info(self, r) -> FlowRunInfo:
@@ -70,14 +67,10 @@ class PrefectTaskService:
     def create_deployment(
         self,
         entrypoint: str,
-        deployment_name: Optional[str] = None,
-        work_pool_name: Optional[str] = None,
-        work_queue_name: Optional[str] = None,
+        deployment_name: str,
+        work_queue_name: str,
+        work_pool_name: str,
     ) -> DeploymentInfo:
-        deployment_name = deployment_name or self.config.default_deployment_name
-        work_pool_name = work_pool_name or self.config.default_work_pool
-        work_queue_name = work_queue_name or self.config.default_work_queue
-
         deployment_kwargs = {
             "entrypoint": entrypoint,
             "name": deployment_name,
@@ -99,25 +92,23 @@ class PrefectTaskService:
     def ensure_deployment(
         self,
         entrypoint: str,
-        deployment_name: Optional[str] = None,
-        work_pool_name: Optional[str] = None,
-        work_queue_name: Optional[str] = None,
+        deployment_name: str,
+        work_queue_name: str,
+        work_pool_name: str,
     ) -> DeploymentInfo:
         return self.create_deployment(
             entrypoint=entrypoint,
             deployment_name=deployment_name,
-            work_pool_name=work_pool_name,
             work_queue_name=work_queue_name,
+            work_pool_name=work_pool_name,
         )
 
     def trigger_run(
         self,
         deployment_ref: str,
         parameters: dict,
-        work_queue_name: Optional[str] = None,
+        work_queue_name: str,
     ) -> FlowRunInfo:
-        work_queue_name = work_queue_name or self.config.default_work_queue
-
         try:
             deployment_id = self._resolve_deployment_id(deployment_ref)
         except DeploymentNotFoundError:
@@ -225,7 +216,7 @@ class PrefectTaskService:
         self,
         parameters: dict,
         deployment_ref: str,
-        work_queue_name: Optional[str] = None,
+        work_queue_name: str,
     ) -> FlowRunInfo:
         return self.trigger_run(
             deployment_ref=deployment_ref,

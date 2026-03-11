@@ -33,6 +33,7 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
     trigger_parser = client_actions.add_parser("trigger", help="触发一次性任务")
     trigger_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
     trigger_parser.add_argument("--params", required=True, help="JSON 参数，例如 '{\"name\": \"demo\"}'")
+    trigger_parser.add_argument("--work-queue", "--work_queue", required=True, dest="work_queue", default="default-task-queue", help="Work Queue name")
     trigger_parser.add_argument("--timeout", type=int, default=60, help="等待超时(秒)")
 
     client_actions.add_parser("list", help="列出所有 deployments")
@@ -71,6 +72,8 @@ def _configure_client_parser(client_parser: argparse.ArgumentParser) -> None:
     create_parser = client_actions.add_parser("create", help="创建或更新 deployment")
     create_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
     create_parser.add_argument("--entrypoint", required=True, help="Flow 入口，例如 flows.task_flow:my_task_flow")
+    create_parser.add_argument("--work-pool", "--work_pool", dest="work_pool", default="default-task-pool", help="Work Pool name")
+    create_parser.add_argument("--work-queue", "--work_queue", required=True, dest="work_queue", default="default-task-queue", help="Work Queue name")
 
     delete_parser = client_actions.add_parser("delete", help="删除 deployment")
     delete_parser.add_argument("--deployment", required=True, help="Deployment名称或引用")
@@ -92,6 +95,7 @@ def handle_client_mode(args) -> None:
         trigger_run(
             deployment_name=args.deployment,
             parameters=params,
+            work_queue_name=args.work_queue,
         )
     elif args.action == "list":
         list_deployments()
@@ -115,6 +119,8 @@ def handle_client_mode(args) -> None:
         create_deployment(
             deployment_name=args.deployment,
             entrypoint=args.entrypoint,
+            work_pool_name=args.work_pool,
+            work_queue_name=args.work_queue,
         )
     elif args.action == "delete":
         delete_deployment(deployment_ref=args.deployment)

@@ -62,8 +62,8 @@ python -m executor
 ```
 
 默认使用：
-- work pool: `task-pool`
-- work queue: `task-queue`
+- work pool: `default-task-pool`
+- work queue: `default-task-queue`
 
 ### 终端 3：调用 Client
 
@@ -82,7 +82,7 @@ python -m client list
 python -m client list
 
 # 触发一次性任务
-python -m client trigger --deployment task-run-deployment --params '{"task_name": "my-task"}'
+python -m client trigger --deployment task-run-deployment --work-queue default-task-queue --params '{"task_name": "my-task"}'
 
 # 更新 cron 定时任务
 python -m client schedule-update --cron "*/5 * * * *" --deployment task-run-deployment --params '{"task_name":"demo"}'
@@ -94,7 +94,7 @@ python -m client schedule-params-update --deployment task-run-deployment --param
 python -m client schedule-cancel --deployment task-run-deployment
 
 # 创建/更新 deployment
-python -m client create --deployment task-run-deployment --entrypoint "flows.task_flow:my_task_flow"
+python -m client create --deployment task-run-deployment --entrypoint "flows.task_flow:my_task_flow" --work-pool default-task-pool --work-queue default-task-queue
 
 # 删除 deployment
 python -m client delete --deployment task-run-deployment
@@ -106,8 +106,8 @@ python -m client status --run-id <FLOW_RUN_ID>
 常用参数：
 
 - `--deployment`：必须显式传入（run/schedule）
-- `--pool`：默认 `task-pool`（executor 使用）
-- `--queue`：默认 `task-queue`（executor 使用）
+- `--pool`：默认 `default-task-pool`（executor 使用）
+- `--queue`：默认 `default-task-queue`（executor 使用）
 - `--host` / `--port`：默认 `127.0.0.1:4200`
 
 ---
@@ -123,6 +123,8 @@ svc = PrefectTaskService()
 deployment = svc.create_deployment(
     deployment_name="task-run-deployment",
     entrypoint="flows.task_flow:my_task_flow",
+    work_pool_name="default-task-pool",
+    work_queue_name="default-task-queue",
 )
 print(deployment.name)
 ```
@@ -136,6 +138,7 @@ svc = PrefectTaskService()
 run = svc.trigger_run(
     deployment_ref="task-run-deployment",
     parameters={"task_name": "demo-once"},
+    work_queue_name="default-task-queue",
 )
 print(run.id, run.state_type)
 ```
@@ -216,8 +219,8 @@ svc.delete_deployment("task-run-deployment")
 
 - Flow: `my-task-flow`
 - Deployment: `task-run-deployment`
-- Work Pool: `task-pool`
-- Work Queue: `task-queue`
+- Work Pool: `default-task-pool`
+- Work Queue: `default-task-queue`
 
 ---
 
@@ -266,12 +269,15 @@ class RunOnceRequest(BaseModel):
     task_name: str
     deployment: str
     entrypoint: str
+    work_queue_name: str
 
 
 class CronRequest(BaseModel):
     cron: str
     entrypoint: str
     deployment_name: str
+    work_pool_name: str
+    work_queue_name: str
 
 
 @app.get("/health")
@@ -303,6 +309,7 @@ def run_once(req: RunOnceRequest):
         run = svc.trigger_run(
             deployment_ref=req.deployment,
             parameters={"task_name": req.task_name},
+            work_queue_name=req.work_queue_name,
         )
         return {
             "run_id": run.id,
@@ -321,6 +328,8 @@ def schedule(req: CronRequest):
         svc.create_deployment(
             deployment_name=req.deployment_name,
             entrypoint=req.entrypoint,
+            work_pool_name=req.work_pool_name,
+            work_queue_name=req.work_queue_name,
         )
         d = svc.update_schedule(
             deployment_ref=req.deployment_name,

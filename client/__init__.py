@@ -37,8 +37,15 @@ def _service() -> PrefectTaskService:
 def create_deployment(
     deployment_name: str,
     entrypoint: str,
+    work_queue_name: str,
+    work_pool_name: str = "default-task-pool",
 ):
-    deployment = _service().create_deployment(entrypoint=entrypoint, deployment_name=deployment_name)
+    deployment = _service().create_deployment(
+        entrypoint=entrypoint,
+        deployment_name=deployment_name,
+        work_queue_name=work_queue_name,
+        work_pool_name=work_pool_name,
+    )
     print("✅ Deployment 已创建/更新")
     print(f"   Deployment: {deployment.name}")
     return deployment
@@ -47,8 +54,13 @@ def create_deployment(
 def trigger_run(
     deployment_name: str,
     parameters: dict,
+    work_queue_name: str,
 ):
-    run = _service().trigger_run(deployment_ref=deployment_name, parameters=parameters)
+    run = _service().trigger_run(
+        deployment_ref=deployment_name,
+        parameters=parameters,
+        work_queue_name=work_queue_name,
+    )
     print("=" * 50)
     print("📝 触发任务 (Deployment)")
     print("=" * 50)
@@ -103,8 +115,13 @@ def cancel_schedule(
 def register_task(
     deployment_name: str,
     parameters: dict,
+    work_queue_name: str,
 ):
-    return trigger_run(deployment_name=deployment_name, parameters=parameters)
+    return trigger_run(
+        deployment_name=deployment_name,
+        parameters=parameters,
+        work_queue_name=work_queue_name,
+    )
 
 
 def list_deployments() -> list[DeploymentInfo]:

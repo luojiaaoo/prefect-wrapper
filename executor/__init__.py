@@ -10,8 +10,8 @@ PREFECT_WORKER_DIR = os.path.join(PROJECT_ROOT, ".prefect_worker")
 
 
 def run_executor(
-    pool_name: str = "task-pool",
-    work_queue: str = "task-queue",
+    pool_name: str = "default-task-pool",
+    work_queue: str = "default-task-queue",
     worker_type: str = "process",
     api_url: str = "http://127.0.0.1:4200/api"
 ):
