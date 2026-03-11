@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -50,12 +51,21 @@ class PrefectTaskService:
                     schedule_type = None
                 cron = getattr(schedule_item, "cron", None) if schedule_item else None
                 timezone = getattr(schedule_item, "timezone", None) if schedule_item else None
+                parameters = getattr(schedule, "parameters", None)
+                parameters_text = None
+                if parameters is not None:
+                    try:
+                        parameters_text = json.dumps(parameters, ensure_ascii=False)
+                    except TypeError:
+                        parameters_text = str(parameters)
                 if cron:
                     description = f"{schedule_type}:{cron}"
                 else:
                     description = schedule_type or "schedule"
                 if timezone:
                     description = f"{description} ({timezone})"
+                if parameters_text:
+                    description = f"{description} params={parameters_text}"
                 schedule_descriptions.append(description)
         return DeploymentInfo(
             id=str(d.id),
